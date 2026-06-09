@@ -5,30 +5,114 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calculator</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .calculator {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 300px;
+      margin: 0 auto;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #f9f9f9;
+    }
+    .input, .display {
+      width: 100%;
+      text-align: right;
+      padding: 10px;
+      font-size: 1.5em;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      margin-bottom: 5px;
+      box-sizing: border-box;
+      min-height: 40px;
+    }
+    .input {
+      font-size: 1.2em;
+      color: #555;
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      grid-template-areas:
+        "clear divide multiply subtract"
+        "seven eight nine add"
+        "four five six equals"
+        "one two three dot"
+        "zero zero zero .";
+      gap: 5px;
+      width: 100%;
+    }
+    .buttons button {
+      padding: 15px;
+      font-size: 1.2em;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      background: #eee;
+      cursor: pointer;
+    }
+    .buttons button:active {
+      background: #ddd;
+    }
+    .buttons button[data-area="clear"] { background: #ff6b6b; color: white; }
+    .buttons button[data-area="equals"] { background: #4ecdc4; color: white; }
+    .buttons button[data-area="add"],
+    .buttons button[data-area="subtract"],
+    .buttons button[data-area="multiply"],
+    .buttons button[data-area="divide"] { background: #f0ad4e; color: white; }
+  </style>
 </head>
 <body>
   <div class="calculator">
+    <div class="input" id="input"></div>
     <div class="display" id="display">0</div>
     <div class="buttons">
-      <button class="clear" data-action="clear">C</button>
-      <button class="operator" data-action="divide">/</button>
-      <button class="operator" data-action="multiply">*</button>
-      <button class="operator" data-action="subtract">-</button>
-      <button class="number" data-value="7">7</button>
-      <button class="number" data-value="8">8</button>
-      <button class="number" data-value="9">9</button>
-      <button class="operator" data-action="add">+</button>
-      <button class="number" data-value="4">4</button>
-      <button class="number" data-value="5">5</button>
-      <button class="number" data-value="6">6</button>
-      <button class="equals" data-action="equals">=</button>
-      <button class="number" data-value="1">1</button>
-      <button class="number" data-value="2">2</button>
-      <button class="number" data-value="3">3</button>
-      <button class="number zero" data-value="0">0</button>
-      <button class="decimal" data-value=".">.</button>
+      <button class="clear" data-action="clear" data-area="clear">C</button>
+      <button class="operator" data-action="divide" data-area="divide">/</button>
+      <button class="operator" data-action="multiply" data-area="multiply">*</button>
+      <button class="operator" data-action="subtract" data-area="subtract">-</button>
+      <button class="number" data-value="7" data-area="seven">7</button>
+      <button class="number" data-value="8" data-area="eight">8</button>
+      <button class="number" data-value="9" data-area="nine">9</button>
+      <button class="operator" data-action="add" data-area="add">+</button>
+      <button class="number" data-value="4" data-area="four">4</button>
+      <button class="number" data-value="5" data-area="five">5</button>
+      <button class="number" data-value="6" data-area="six">6</button>
+      <button class="equals" data-action="equals" data-area="equals">=</button>
+      <button class="number" data-value="1" data-area="one">1</button>
+      <button class="number" data-value="2" data-area="two">2</button>
+      <button class="number" data-value="3" data-area="three">3</button>
+      <button class="decimal" data-value="." data-area="dot">.</button>
+      <button class="number zero" data-value="0" data-area="zero">0</button>
     </div>
   </div>
   <script src="script.js"></script>
+  <script>
+    // Update input display based on button clicks
+    (function() {
+      var inputDiv = document.getElementById('input');
+      var currentInput = '';
+      document.querySelector('.buttons').addEventListener('click', function(e) {
+        var btn = e.target.closest('button');
+        if (!btn) return;
+        var val = btn.getAttribute('data-value') || btn.getAttribute('data-action');
+        if (btn.getAttribute('data-action') === 'clear') {
+          currentInput = '';
+        } else if (btn.getAttribute('data-action') === 'equals') {
+          // do nothing, result shown by main script
+        } else if (val) {
+          if (btn.getAttribute('data-action') && ['add','subtract','multiply','divide'].includes(btn.getAttribute('data-action'))) {
+            currentInput += val === 'add' ? '+' : val === 'subtract' ? '-' : val === 'multiply' ? '*' : val === 'divide' ? '/' : val;
+          } else {
+            currentInput += val;
+          }
+        }
+        inputDiv.textContent = currentInput;
+      });
+    })();
+  </script>
 </body>
 </html>

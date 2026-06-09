@@ -90,6 +90,20 @@ function handleClear() {
 
 // Event delegation for button clicks
 const buttonsContainer = document.querySelector('.buttons');
+
+// ADR-001: Apply CSS Grid layout to buttons for a flexible, maintainable grid
+buttonsContainer.style.display = 'grid';
+buttonsContainer.style.gridTemplateColumns = 'repeat(4, 1fr)';
+buttonsContainer.style.gridTemplateAreas = `
+  "clear clear divide multiply"
+  "seven eight nine subtract"
+  "four five six add"
+  "one two three equals"
+  "zero zero decimal equals"
+`;
+// Ensure child button components have appropriate grid-area (already set in HTML if not, but this ensures a fallback)
+// Note: HTML elements must have corresponding `data-area` or inline `grid-area` for this to work.
+
 buttonsContainer.addEventListener('click', (e) => {
   const button = e.target.closest('button');
   if (!button) return;
