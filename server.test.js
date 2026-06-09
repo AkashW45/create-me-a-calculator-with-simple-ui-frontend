@@ -71,4 +71,14 @@ describe('Express Server', () => {
     expect(headers['content-type']).toMatch(/text\/html/);
     expect(body).toContain('<html');
   });
+
+  test('GET / returns HTML with button grid layout', async () => {
+    const { body } = await httpGet(`${BASE_URL}/`);
+    expect(body).toContain('class="button-grid"');
+  });
+
+  test('GET / returns HTML with user input display area', async () => {
+    const { body } = await httpGet(`${BASE_URL}/`);
+    expect(body).toContain('id="input-display"');
+  });
 });
