@@ -4,26 +4,39 @@ const state = {
   previousInput: null,
   operator: null,
   result: null,
-  shouldResetDisplay: false
+  shouldResetDisplay: false,
+  expression: '',
+  lastExpression: ''
 };
 
 const display = document.getElementById('display');
+const expressionDisplay = document.getElementById('expression');
 
 function updateDisplay() {
   display.textContent = state.currentInput;
+  // Update expression display: show last expression if exists, else current expression
+  if (state.lastExpression) {
+    expressionDisplay.textContent = state.lastExpression;
+  } else {
+    expressionDisplay.textContent = state.expression;
+  }
 }
 
 function handleNumber(value) {
   if (state.shouldResetDisplay) {
     state.currentInput = value;
     state.shouldResetDisplay = false;
+    state.expression = value;
+    state.lastExpression = '';
   } else {
     if (state.currentInput === '0' && value !== '.') {
       state.currentInput = value;
+      state.expression = value;
     } else if (value === '.' && state.currentInput.includes('.')) {
       return;
     } else {
       state.currentInput += value;
+      state.expression += value;
     }
   }
   updateDisplay();
@@ -32,10 +45,15 @@ function handleNumber(value) {
 function handleOperator(op) {
   if (state.operator && !state.shouldResetDisplay) {
     compute();
+    state.expression = state.currentInput;
+    state.lastExpression = '';
   }
   state.previousInput = state.currentInput;
   state.operator = op;
   state.shouldResetDisplay = true;
+  const operatorSymbols = { 'add': ' + ', 'subtract': ' − ', 'multiply': ' × ', 'divide': ' ÷ ' };
+  state.expression += operatorSymbols[op] || ' ' + op;
+  updateDisplay();
 }
 
 function compute() {
@@ -50,7 +68,9 @@ function compute() {
     case 'divide': result = curr !== 0 ? prev / curr : 'Error'; break;
     default: return;
   }
+  state.lastExpression = state.expression;
   state.currentInput = String(result);
+  state.expression = String(result);
   state.operator = null;
   state.previousInput = null;
   state.shouldResetDisplay = true;
@@ -63,6 +83,8 @@ function handleClear() {
   state.operator = null;
   state.result = null;
   state.shouldResetDisplay = false;
+  state.expression = '';
+  state.lastExpression = '';
   updateDisplay();
 }
 
