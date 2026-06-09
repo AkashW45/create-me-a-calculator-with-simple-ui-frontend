@@ -98,6 +98,57 @@
       document.querySelector('.buttons').addEventListener('click', function(e) {
         var btn = e.target.closest('button');
         if (!btn) return;
+        var action = btn.dataset.action;
+        var value = btn.dataset.value;
+        if (action === 'clear') {
+          currentInput = '';
+          inputDiv.textContent = '';
+          document.getElementById('display').textContent = '0';
+        } else if (action === 'equals') {
+          handleEquals();
+        } else if (value !== undefined) {
+          currentInput += value;
+          inputDiv.textContent = currentInput;
+        } else if (action) {
+          currentInput += btn.textContent;
+          inputDiv.textContent = currentInput;
+        }
+      });
+
+      function handleEquals() {
+        var display = document.getElementById('display');
+        try {
+          var result = evaluateExpression(currentInput);
+          display.textContent = result;
+          currentInput = result.toString();
+          inputDiv.textContent = currentInput;
+        } catch (e) {
+          display.textContent = 'Error';
+        }
+      }
+
+      function evaluateExpression(expr) {
+        var tokens = expr.match(/([0-9.]+|[+\-*\/])/g);
+        if (!tokens) return 0;
+        var result = parseFloat(tokens[0]);
+        for (var i = 1; i < tokens.length; i += 2) {
+          var op = tokens[i];
+          var num = parseFloat(tokens[i+1]);
+          if (isNaN(num)) break;
+          switch(op) {
+            case '+': result += num; break;
+            case '-': result -= num; break;
+            case '*': result *= num; break;
+            case '/':
+              if (num === 0) throw new Error('Division by zero');
+              result /= num;
+              break;
+          }
+        }
+        return result;
+      }
+    })();
+  </script>
         var val = btn.getAttribute('data-value') || btn.getAttribute('data-action');
         if (btn.getAttribute('data-action') === 'clear') {
           currentInput = '';
