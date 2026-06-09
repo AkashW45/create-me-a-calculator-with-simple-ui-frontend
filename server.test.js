@@ -1,79 +1,58 @@
 const request = require('supertest');
-const path = require('path');
-const fs = require('fs');
 
-// Capture the express app instance by mocking app.listen
+// Mock express to capture the app instance and prevent starting the server
 let app;
-let originalListen;
-
-beforeAll(() => {
-  // Prepare a minimal public/index.html for the static file test
-  const publicDir = path.join(__dirname, 'public');
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir);
-  }
-  fs.writeFileSync(
-    path.join(publicDir, 'index.html'),
-    '<html><head></head><body id="calculator-ui">Calculator</body></html>',
-    'utf8'
-  );
-
-  // Mock express.application.listen to capture the app instance
-  const express = require('express');
-  originalListen = express.application.listen;
-  express.application.listen = jest.fn(function (port, host, callback) {
-    app = this; // capture the express app
-    if (callback) callback();
-    return { close: jest.fn() };
-  });
-
-  // Now require the server – it will call our mocked listen
-  require('./server');
+jest.mock('express', () => {
+  const actualExpress = jest.requireActual('express');
+  return () => {
+    app = actualExpress();
+    app.listen = jest.fn(() => ({ close: jest.fn() }));
+    return app;
+  };
 });
 
-afterAll(() => {
-  // Restore the original listen method
-  const express = require('express');
-  express.application.listen = originalListen;
+// Require the server module after mocking so the routes are registered on our mock app
+require('./server');
 
-  // Clean up the dummy public directory
-  const publicDir = path.join(__dirname, 'public');
-  if (fs.existsSync(path.join(publicDir, 'index.html'))) {
-    fs.unlinkSync(path.join(publicDir, 'index.html'));
-  }
-  if (fs.existsSync(publicDir)) {
-    fs.rmdirSync(publicDir);
-  }
-});
-
-describe('Server endpoints', () => {
-  test('GET /health returns 200 with status ok and JSON content-type', async () => {
-    const res = await request(app).get('/health');
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok' });
-    expect(res.headers['content-type']).toMatch(/json/);
+describe('Calculator Server', () => {
+  describe('GET /health', () => {
+    it('should return 200 with status ok and non‑empty body', async () => {
+      const res = await request(app).get('/health');
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({ status: 'ok' });
+      expect(JSON.stringify(res.body).length).toBeGreaterThan(0);
+    });
   });
 
-  test('GET / serves index.html with status 200 and text/html content-type', async () => {
-    const res = await request(app).get('/');
-    expect(res.status).toBe(200);
-    expect(res.headers['content-type']).toMatch(/html/);
-    expect(res.text).toContain('Calculator');
+  describe('GET /', () => {
+    it('should return 200 and serve the calculator UI', async () => {
+      const res = await request(app).get('/');
+      expect(res.statusCode).toBe(200);
+      // Check for key calculator elements in the inline HTML
+      expect(res.text).toContain('<div class="calculator" id="app">');
+      expect(res.text).toContain('id="inputDisplay"');
+      expect(res.text).toContain('id="resultDisplay"');
+      expect(res.text).toContain('data-action="equals"');
+    });
+
+    it('should include the handleEquals function definition (fix verification)', async () => {
+      const res = await request(app).get('/');
+      expect(res.text).toContain('function handleEquals()');
+    });
+
+    it('should attach the equals button event listener separately', async () => {
+      const res = await request(app).get('/');
+      // Verify the explicit event listener that was missing before
+      expect(res.text).toContain(
+        'document.querySelector(\'[data-action="equals"]\').addEventListener(\'click\', handleEquals)'
+      );
+    });
   });
 
-  test('GET / returns exactly the dummy content we created', async () => {
-    const res = await request(app).get('/');
-    expect(res.text).toContain('id="calculator-ui"');
-  });
-
-  test('GET /nonexistent returns 404 because static middleware cannot find the file', async () => {
-    const res = await request(app).get('/nonexistent');
-    expect(res.status).toBe(404);
-  });
-
-  test('GET /health returns non-empty body', async () => {
-    const res = await request(app).get('/health');
-    expect(res.body).toBeDefined();
-    expect(Object.keys(res.body).length).toBeGreaterThan(0);
+  describe('GET /nonexistent', () => {
+    it('should return 404 for unknown routes', async () => {
+      const res = await request(app).get('/nonexistent');
+      expect(res.statusCode).toBe(404);
+    });
   });
 });

@@ -126,6 +126,12 @@ app.get('/', (req, res) => {
     }
   });
 })();
+function handleEquals() {
+  calculate();
+}
+
+document.querySelector('[data-action="equals"]').addEventListener('click', handleEquals);
+
 </script>
 </body>
 </html>`;
