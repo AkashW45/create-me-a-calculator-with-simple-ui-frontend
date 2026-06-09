@@ -99,6 +99,30 @@ button:active {
   grid-column: span 2;
 }
 
+#input {
+  background: #333;
+  color: #ccc;
+  font-size: 1.2rem;
+  text-align: right;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  min-height: 30px;
+  overflow-x: auto;
+}
+
+#display {
+  background: #222;
+  color: #fff;
+  font-size: 2.4rem;
+  text-align: right;
+  padding: 15px 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  min-height: 70px;
+  overflow-x: auto;
+}
+
 .zero {
   grid-column: span 2;
 }
