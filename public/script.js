@@ -10,15 +10,15 @@ const state = {
 };
 
 const display = document.getElementById('display');
-const expressionDisplay = document.getElementById('expression');
+const inputDisplay = document.getElementById('input');
 
 function updateDisplay() {
   display.textContent = state.currentInput;
-  // Update expression display: show last expression if exists, else current expression
+  // Update input display: show last expression if exists, else current expression
   if (state.lastExpression) {
-    expressionDisplay.textContent = state.lastExpression;
+    inputDisplay.textContent = state.lastExpression;
   } else {
-    expressionDisplay.textContent = state.expression;
+    inputDisplay.textContent = state.expression;
   }
 }
 
