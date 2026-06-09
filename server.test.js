@@ -1,84 +1,80 @@
-const { spawn } = require('child_process');
-const http = require('http');
-const path = require('path');
+const request = require('supertest');
+let app;
 
-const serverScript = path.join(__dirname, 'server.js');
-const BASE_URL = 'http://localhost:8000';
-
-let serverProcess;
-
-// Utility to perform an HTTP GET request and return a promise
-function httpGet(url) {
-  return new Promise((resolve, reject) => {
-    http.get(url, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: data }));
-      res.on('error', reject);
-    }).on('error', reject);
-  });
-}
-
-beforeAll((done) => {
-  serverProcess = spawn('node', [serverScript], { stdio: 'pipe' });
-
-  // Wait until the health endpoint responds
-  const maxAttempts = 20;
-  let attempts = 0;
-  const check = () => {
-    http.get(`${BASE_URL}/health`, (res) => {
-      if (res.statusCode === 200) {
-        done();
-      } else if (++attempts < maxAttempts) {
-        setTimeout(check, 200);
-      } else {
-        done(new Error('Server did not start in time'));
-      }
-    }).on('error', () => {
-      if (++attempts < maxAttempts) {
-        setTimeout(check, 200);
-      } else {
-        done(new Error('Server did not start in time'));
-      }
+// Mock express to prevent server listening and to capture the app instance
+jest.mock('express', () => {
+  const actualExpress = jest.requireActual('express');
+  const fn = () => {
+    app = actualExpress();
+    // Prevent actual listening
+    app.listen = jest.fn((...args) => {
+      // Call the callback if provided (the server.js callback)
+      const cb = args[2] || args[1] || args[0];
+      if (typeof cb === 'function') cb();
+      return { close: jest.fn() };
     });
+    return app;
   };
-  setTimeout(check, 300);
-}, 20000);
-
-afterAll(() => {
-  if (serverProcess) {
-    serverProcess.kill('SIGTERM');
-  }
+  // Copy static methods from actual express
+  fn.static = actualExpress.static;
+  fn.json = actualExpress.json;
+  fn.urlencoded = actualExpress.urlencoded;
+  return fn;
 });
 
-describe('Express Server', () => {
-  test('GET /health returns 200 with status ok', async () => {
-    const { status, body } = await httpGet(`${BASE_URL}/health`);
-    expect(status).toBe(200);
-    expect(JSON.parse(body)).toEqual({ status: 'ok' });
+// Now require the server to set up routes on the mocked app
+require('./server');
+
+describe('Calculator Server', () => {
+  afterAll(() => {
+    // Clean up if needed (e.g., close any open handles)
   });
 
-  test('GET / (root) serves the index.html static file', async () => {
-    const { status, headers, body } = await httpGet(`${BASE_URL}/`);
-    expect(status).toBe(200);
-    expect(headers['content-type']).toMatch(/text\/html/);
-    expect(body).toContain('<html');  // Basic check for HTML document
+  describe('GET /health', () => {
+    it('should return 200 and status ok', async () => {
+      const res = await request(app).get('/health');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ status: 'ok' });
+      expect(res.headers['content-type']).toMatch(/json/);
+    });
   });
 
-  test('GET non-existent path still returns 200 and fallback HTML', async () => {
-    const { status, headers, body } = await httpGet(`${BASE_URL}/some-unknown-route`);
-    expect(status).toBe(200);
-    expect(headers['content-type']).toMatch(/text\/html/);
-    expect(body).toContain('<html');
+  describe('Catch-all route', () => {
+    it('should return 200 with HTML containing calculator UI', async () => {
+      const res = await request(app).get('/');
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('<!DOCTYPE html>');
+      expect(res.text).toContain('<title>Calculator</title>');
+      expect(res.text).toContain('id="inputDisplay"');
+      expect(res.text).toContain('id="resultDisplay"');
+      expect(res.text).toContain('class="buttons"');
+    });
+
+    it('should serve the calculator UI for any path (catch-all)', async () => {
+      const res = await request(app).get('/any/random/path');
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('<title>Calculator</title>');
+    });
+
+    it('should return Content-Type text/html', async () => {
+      const res = await request(app).get('/');
+      expect(res.headers['content-type']).toMatch(/html/);
+    });
   });
 
-  test('GET / returns HTML with button grid layout', async () => {
-    const { body } = await httpGet(`${BASE_URL}/`);
-    expect(body).toContain('class="button-grid"');
-  });
+  describe('UI layout and input display', () => {
+    it('should contain a grid-based buttons container', async () => {
+      const res = await request(app).get('/');
+      // Check that buttons div has grid styles injected inline or class 'buttons'
+      // The HTML includes <style> with .buttons { display: grid; ... }
+      expect(res.text).toMatch(/\.buttons\s*\{[^}]*display:\s*grid[^}]*\}/);
+      expect(res.text).toContain('class="buttons"');
+    });
 
-  test('GET / returns HTML with user input display area', async () => {
-    const { body } = await httpGet(`${BASE_URL}/`);
-    expect(body).toContain('id="input-display"');
+    it('should display the user input area', async () => {
+      const res = await request(app).get('/');
+      expect(res.text).toContain('id="inputDisplay"');
+      expect(res.text).toContain('inputDisplay.textContent = input || \' \'');
+    });
   });
 });
